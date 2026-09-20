@@ -5,7 +5,7 @@ EcoFlow DELTA 2 Max, using the [EcoFlow Open Platform API](https://developer.eco
 
 ![Latest EcoFlow chart](data/ecoflow_plot.png)
 
-*Auto-updated every 15 minutes by [`.github/workflows/log-and-plot.yml`](.github/workflows/log-and-plot.yml) — see [Automated logging on GitHub Actions](#automated-logging-on-github-actions) below. The image above is blank until that workflow's secrets are configured and it runs once.*
+*Auto-updated hourly by [`.github/workflows/log-and-plot.yml`](.github/workflows/log-and-plot.yml) — see [Automated logging on GitHub Actions](#automated-logging-on-github-actions) below. The image above is blank until that workflow's secrets are configured and it runs once.*
 
 ## Setup
 
@@ -70,7 +70,7 @@ the trends.
 ## Automated logging on GitHub Actions
 
 [`.github/workflows/log-and-plot.yml`](.github/workflows/log-and-plot.yml) polls
-the device every 15 minutes, regenerates the chart, and commits both
+the device once an hour, regenerates the chart, and commits both
 `data/ecoflow_log.csv` and `data/ecoflow_plot.png` back to the repository —
 so the chart embedded at the top of this README always reflects the latest
 reading. It also runs on demand via the "Run workflow" button under the
@@ -99,7 +99,7 @@ every commit the Actions workflow above makes.
 To publish it: **Settings → Pages → Build and deployment → Source: "Deploy
 from a branch" → Branch: `main`, folder: `/ (root)` → Save.** GitHub then
 serves it at `https://<owner>.github.io/<repo>/` and redeploys automatically
-on every push to `main`, including the 15-minute data commits — no separate
+on every push to `main`, including the hourly data commits — no separate
 Pages workflow needed.
 
 It's also installable as a PWA (`manifest.webmanifest` + `sw.js`): on

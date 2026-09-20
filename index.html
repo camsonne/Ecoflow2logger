@@ -81,7 +81,7 @@
 <body>
 <main>
   <h1>EcoFlow DELTA 2 Max</h1>
-  <p class="subtitle">Charge and power, logged every 15 minutes by <a href="https://github.com/camsonne/Ecoflow2logger">GitHub Actions</a>.</p>
+  <p class="subtitle">Charge and power, logged hourly by <a href="https://github.com/camsonne/Ecoflow2logger">GitHub Actions</a>.</p>
 
   <div class="stats" id="stats">
     <div class="stat"><div class="label">Charge</div><div class="value" id="stat-soc">–</div></div>
@@ -126,9 +126,7 @@
         "No data yet — waiting on the first workflow run.";
     });
 
-  // TEMP: matches the workflow's temporary 5-minute polling interval;
-  // revert to 15 * 60 * 1000 alongside the cron revert.
-  setInterval(() => location.reload(), 2 * 60 * 1000);
+  setInterval(() => location.reload(), 60 * 60 * 1000);
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
