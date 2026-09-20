@@ -20,7 +20,11 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          # Read from .python-version so the runner, local checkouts and
+          # Dependabot's resolver all agree on one target. numpy and
+          # contourpy now require >=3.12, so a 3.11 runner silently makes
+          # their pinned versions uninstallable.
+          python-version-file: .python-version
 
       - run: pip install -r requirements.txt
 
