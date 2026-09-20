@@ -126,7 +126,9 @@
         "No data yet — waiting on the first workflow run.";
     });
 
-  setInterval(() => location.reload(), 60 * 60 * 1000);
+  // TEMP: matches the workflow's temporary 5-minute polling; revert to
+  // 60 * 60 * 1000 alongside the cron revert.
+  setInterval(() => location.reload(), 2 * 60 * 1000);
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {

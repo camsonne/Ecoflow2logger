@@ -2,7 +2,7 @@ name: Log EcoFlow reading and update chart
 
 on:
   schedule:
-    - cron: "0 * * * *"  # hourly; GitHub only fires schedule triggers from the default branch, and can delay/skip runs under load
+    - cron: "*/5 * * * *"  # TEMP: every 5 min to check if the device is back online after a possible power/box restart; revert to hourly once confirmed. GitHub only fires schedule triggers from the default branch, and can delay/skip runs under load
   workflow_dispatch: {}
 
 permissions:
