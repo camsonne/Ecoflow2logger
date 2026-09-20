@@ -102,6 +102,11 @@ serves it at `https://<owner>.github.io/<repo>/` and redeploys automatically
 on every push to `main`, including the 15-minute data commits — no separate
 Pages workflow needed.
 
+It's also installable as a PWA (`manifest.webmanifest` + `sw.js`): on
+Android Chrome, open the Pages URL and use **⋮ → Add to Home screen** (or
+the install prompt if Chrome offers one) to get an app icon that opens
+full-screen, with the last-seen reading cached for offline viewing.
+
 ## How it works
 
 - `ecoflow_logger/api.py` — signs and sends requests to EcoFlow's
