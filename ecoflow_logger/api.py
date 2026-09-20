@@ -48,11 +48,24 @@ def _flatten(params: dict[str, Any], prefix: str = "") -> dict[str, Any]:
     return flat
 
 
-def _sign(params: dict[str, Any], secret_key: str) -> str:
+def _qstring(params: dict[str, Any]) -> str:
     flat = _flatten(params)
-    query = "&".join(f"{k}={flat[k]}" for k in sorted(flat))
+    return "&".join(f"{k}={flat[k]}" for k in sorted(flat))
+
+
+def _sign(request_params: dict[str, Any], auth_params: dict[str, Any], secret_key: str) -> str:
+    """Build the string to sign and HMAC it.
+
+    EcoFlow's scheme sorts the request params and the auth params
+    (accessKey/nonce/timestamp) *separately* and concatenates the two
+    query strings, rather than merging everything into one dict and
+    sorting the combined set — request params come first.
+    """
+    parts = [_qstring(request_params)] if request_params else []
+    parts.append(_qstring(auth_params))
+    sign_str = "&".join(parts)
     return hmac.new(
-        secret_key.encode("utf-8"), query.encode("utf-8"), hashlib.sha256
+        secret_key.encode("utf-8"), sign_str.encode("utf-8"), hashlib.sha256
     ).hexdigest()
 
 
@@ -78,7 +91,7 @@ class EcoFlowClient:
     def _auth_params(self) -> dict[str, Any]:
         return {
             "accessKey": self.access_key,
-            "nonce": str(random.randint(10000, 999999)),
+            "nonce": str(random.randint(100000, 999999)),
             "timestamp": str(int(time.time() * 1000)),
         }
 
@@ -88,20 +101,15 @@ class EcoFlowClient:
         Returns the flat ``data`` dict from the API, e.g. with keys such
         as ``bmsMaster.soc``, ``pd.wattsInSum`` and ``pd.wattsOutSum``.
         """
-        params = self._auth_params()
-        params["sn"] = device_sn
-        sign = _sign(params, self.secret_key)
+        request_params = {"sn": device_sn}
+        auth_params = self._auth_params()
+        sign = _sign(request_params, auth_params, self.secret_key)
 
-        headers = {
-            "accessKey": params["accessKey"],
-            "nonce": params["nonce"],
-            "timestamp": params["timestamp"],
-            "sign": sign,
-        }
+        headers = {**auth_params, "sign": sign}
         url = f"{self.base_url}{QUOTA_ALL_PATH}"
         response = self.session.get(
             url,
-            params={"sn": device_sn},
+            params=request_params,
             headers=headers,
             timeout=self.timeout,
         )
