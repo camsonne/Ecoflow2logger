@@ -84,6 +84,7 @@ variables → Actions):
 | `ECOFLOW_ACCESS_KEY` | your EcoFlow Open API access key |
 | `ECOFLOW_SECRET_KEY` | your EcoFlow Open API secret key |
 | `ECOFLOW_DEVICE_SN` | your device's serial number |
+| `ECOFLOW_BASE_URL` *(optional)* | only if your EcoFlow account is on a non-default API region — see below |
 
 Scheduled (`cron`) workflows only fire from the repository's default branch,
 so this starts running once the workflow file is merged there.
