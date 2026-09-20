@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import random
+import secrets
 import time
 from typing import Any
 
@@ -91,7 +91,10 @@ class EcoFlowClient:
     def _auth_params(self) -> dict[str, Any]:
         return {
             "accessKey": self.access_key,
-            "nonce": str(random.randint(100000, 999999)),
+            # The nonce is replay protection, so it comes from `secrets`
+            # rather than `random`, whose Mersenne Twister state is
+            # recoverable from enough observed outputs.
+            "nonce": str(secrets.randbelow(900000) + 100000),
             "timestamp": str(int(time.time() * 1000)),
         }
 

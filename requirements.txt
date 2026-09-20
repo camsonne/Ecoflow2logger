@@ -1,3 +1,26 @@
-requests>=2.28
-matplotlib>=3.6
-tzdata>=2024.1; sys_platform == "win32"
+# Fully pinned, including transitive dependencies. The logging workflow runs
+# every few minutes with a token that can push to this repo, so an unpinned
+# range would install whatever was published to PyPI moments earlier. These
+# versions are the exact set a green CI run resolved; Dependabot proposes
+# bumps (see .github/dependabot.yml).
+
+# Direct dependencies
+requests==2.34.2
+matplotlib==3.11.2
+tzdata==2026.4; sys_platform == "win32"
+
+# Transitive — pinned so the whole install is reproducible
+certifi==2026.7.22
+charset-normalizer==3.5.1
+contourpy==1.4.0
+cycler==0.12.1
+fonttools==4.65.0
+idna==3.20
+kiwisolver==1.5.1
+numpy==2.5.3
+packaging==26.3
+pillow==12.3.0
+pyparsing==3.3.2
+python-dateutil==2.9.0.post0
+six==1.17.0
+urllib3==2.8.0

@@ -16,9 +16,9 @@ jobs:
   log-and-plot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -35,10 +35,15 @@ jobs:
           # Secrets and variables -> Actions has separate tabs for each;
           # this reads either so it's hard to get wrong).
           ECOFLOW_BASE_URL: ${{ secrets.ECOFLOW_BASE_URL || vars.ECOFLOW_BASE_URL }}
+          # Passed as an env var rather than interpolated into the run
+          # block below: `${{ }}` substitutes into the script text before
+          # bash parses it, so a value containing quotes or $(...) would
+          # be re-parsed as shell rather than read as a serial number.
+          ECOFLOW_DEVICE_SN: ${{ secrets.ECOFLOW_DEVICE_SN }}
         run: |
           mkdir -p data
           python -m ecoflow_logger log \
-            --sn "${{ secrets.ECOFLOW_DEVICE_SN }}" \
+            --sn "$ECOFLOW_DEVICE_SN" \
             --csv data/ecoflow_log.csv \
             --iterations 1 \
             -v
