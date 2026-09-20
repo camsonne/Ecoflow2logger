@@ -1,0 +1,16 @@
+version: 2
+
+# Pinning requirements.txt exactly stops a freshly-published (or compromised)
+# release from landing on the runner automatically, but pins go stale and stop
+# picking up security fixes. Dependabot closes that gap by proposing bumps as
+# reviewable PRs. Monthly, since this repo has two direct dependencies.
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
