@@ -79,6 +79,19 @@ variables → Actions):
 Scheduled (`cron`) workflows only fire from the repository's default branch,
 so this starts running once the workflow file is merged there.
 
+## Live dashboard (GitHub Pages)
+
+[`index.html`](index.html) is a small static dashboard — stat tiles for the
+latest charge/power reading plus the chart — that reads `data/ecoflow_log.csv`
+and `data/ecoflow_plot.png` straight out of the repo, so it stays in sync with
+every commit the Actions workflow above makes.
+
+To publish it: **Settings → Pages → Build and deployment → Source: "Deploy
+from a branch" → Branch: `main`, folder: `/ (root)` → Save.** GitHub then
+serves it at `https://<owner>.github.io/<repo>/` and redeploys automatically
+on every push to `main`, including the hourly data commits — no separate
+Pages workflow needed.
+
 ## How it works
 
 - `ecoflow_logger/api.py` — signs and sends requests to EcoFlow's
