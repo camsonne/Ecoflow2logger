@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 
-from ecoflow_logger.api import _sign
+from ecoflow_logger.api import EcoFlowClient, _sign
 
 
 def test_sign_orders_request_params_before_auth_params():
@@ -35,3 +35,13 @@ def test_sign_flattens_nested_dicts():
     a = _sign({}, {"outer": {"inner": 1}}, "secret")
     b = _sign({}, {"outer.inner": 1}, "secret")
     assert a == b
+
+
+def test_auth_params_nonce_stays_six_digits():
+    # EcoFlow expects a 6-digit nonce, so the bounds matter: drawing from
+    # secrets.randbelow without the offset would emit shorter nonces.
+    client = EcoFlowClient("ak", "sk")
+    nonces = [client._auth_params()["nonce"] for _ in range(500)]
+
+    assert all(len(n) == 6 and n.isdigit() for n in nonces)
+    assert len(set(nonces)) > 1  # not a constant
