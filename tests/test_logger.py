@@ -45,6 +45,19 @@ def test_poll_once_appends_one_row(tmp_path: Path):
         rows = list(csv.DictReader(f))
     assert len(rows) == 1
     assert rows[0]["soc_percent"] == "55.0"
+
+
+def test_poll_once_warns_with_available_keys_when_metric_missing(tmp_path: Path, caplog):
+    csv_path = tmp_path / "log.csv"
+    # None of these keys match any candidate in metrics.py, so soc_percent
+    # comes back None even though the quota payload has real data.
+    client = _StubClient({"some.unexpected.key": 55, "pd.wattsInSum": 10, "pd.wattsOutSum": 0})
+
+    with caplog.at_level("WARNING"):
+        poll_once(client, "SN123", csv_path)
+
+    assert any("Available quota keys" in r.message for r in caplog.records)
+    assert any("some.unexpected.key" in r.message for r in caplog.records)
     assert client.calls == ["SN123"]
 
 
