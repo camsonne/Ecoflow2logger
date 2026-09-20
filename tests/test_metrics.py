@@ -34,7 +34,26 @@ def test_extract_reading_falls_back_when_primary_key_missing():
 
 def test_extract_reading_missing_everything_returns_none():
     reading = extract_reading({})
-    assert reading == (None, None, None)
+    assert reading == (None, None, None, None, None, None)
+
+
+def test_extract_reading_extracts_extra_battery():
+    data = {
+        "bms_slave_bmsSlaveStatus_1.soc": 88,
+        "bms_slave_bmsSlaveStatus_1.inputWatts": 162,
+        "bms_slave_bmsSlaveStatus_1.outputWatts": 0,
+    }
+    reading = extract_reading(data)
+    assert reading.extra_battery_soc_percent == 88.0
+    assert reading.extra_battery_watts_in == 162.0
+    assert reading.extra_battery_watts_out == 0.0
+
+
+def test_extract_reading_extra_battery_missing_returns_none():
+    reading = extract_reading({"pd.soc": 50})
+    assert reading.extra_battery_soc_percent is None
+    assert reading.extra_battery_watts_in is None
+    assert reading.extra_battery_watts_out is None
 
 
 def test_extract_reading_ignores_unparseable_values():

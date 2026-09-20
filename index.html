@@ -87,6 +87,9 @@
     <div class="stat"><div class="label">Charge</div><div class="value" id="stat-soc">–</div></div>
     <div class="stat"><div class="label">Power in</div><div class="value" id="stat-in">–</div></div>
     <div class="stat"><div class="label">Power out</div><div class="value" id="stat-out">–</div></div>
+    <div class="stat extra-stat" id="tile-extra-soc" hidden><div class="label">Extra battery charge</div><div class="value" id="stat-extra-soc">–</div></div>
+    <div class="stat extra-stat" id="tile-extra-in" hidden><div class="label">Extra battery power in</div><div class="value" id="stat-extra-in">–</div></div>
+    <div class="stat extra-stat" id="tile-extra-out" hidden><div class="label">Extra battery power out</div><div class="value" id="stat-extra-out">–</div></div>
   </div>
 
   <img src="data/ecoflow_plot.png" alt="EcoFlow charge and power chart" id="chart">
@@ -113,6 +116,21 @@
         row.watts_in ? `${Number(row.watts_in).toFixed(0)} W` : "–";
       document.getElementById("stat-out").textContent =
         row.watts_out ? `${Number(row.watts_out).toFixed(0)} W` : "–";
+
+      // Extra-battery tiles only exist for setups that have one; the CSV
+      // simply won't have these values for everyone else's chart.
+      const hasExtraBattery =
+        row.extra_battery_soc_percent || row.extra_battery_watts_in || row.extra_battery_watts_out;
+      document.querySelectorAll(".extra-stat").forEach((el) => (el.hidden = !hasExtraBattery));
+      if (hasExtraBattery) {
+        document.getElementById("stat-extra-soc").textContent =
+          row.extra_battery_soc_percent ? `${Number(row.extra_battery_soc_percent).toFixed(0)}%` : "–";
+        document.getElementById("stat-extra-in").textContent =
+          row.extra_battery_watts_in ? `${Number(row.extra_battery_watts_in).toFixed(0)} W` : "–";
+        document.getElementById("stat-extra-out").textContent =
+          row.extra_battery_watts_out ? `${Number(row.extra_battery_watts_out).toFixed(0)} W` : "–";
+      }
+
       const lastReadingEt = new Date(row.timestamp).toLocaleString("en-US", {
         timeZone: "America/New_York",
         dateStyle: "medium",

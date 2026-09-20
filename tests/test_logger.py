@@ -7,6 +7,26 @@ import pytest
 from ecoflow_logger.logger import CSV_FIELDS, append_reading, poll_once, run_logger
 
 
+def test_append_reading_migrates_old_header_schema(tmp_path: Path):
+    # Regression test: data/ecoflow_log.csv on main was already committed
+    # under the old 4-column schema before extra-battery columns existed.
+    # Appending a new-schema row under the old header would misalign
+    # columns rather than erroring, so old files must be migrated first.
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text("timestamp,soc_percent,watts_in,watts_out\n2026-09-20T16:16:57+00:00,68.0,598.0,249.0\n")
+
+    append_reading(csv_path, datetime(2026, 9, 20, 17, 0, tzinfo=timezone.utc), 89.0, 997.0, 326.0, 88.0, 162.0, 0.0)
+
+    with csv_path.open() as f:
+        rows = list(csv.DictReader(f))
+    assert list(rows[0].keys()) == CSV_FIELDS
+    assert len(rows) == 2
+    assert rows[0]["soc_percent"] == "68.0"
+    assert rows[0]["extra_battery_soc_percent"] == ""  # backfilled blank, unknown for old row
+    assert rows[1]["extra_battery_soc_percent"] == "88.0"
+    assert rows[1]["extra_battery_watts_in"] == "162.0"
+
+
 def test_append_reading_writes_header_once(tmp_path: Path):
     csv_path = tmp_path / "log.csv"
     t0 = datetime(2024, 1, 1, tzinfo=timezone.utc)

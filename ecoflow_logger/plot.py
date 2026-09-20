@@ -3,7 +3,9 @@
 Renders two stacked panels sharing a time axis rather than one panel with
 two y-scales, since state of charge (%) and power (W) are different units
 and a dual-axis chart makes trends between them impossible to compare
-honestly.
+honestly. When the log includes extra-battery data, two more panels are
+added below in the same style, rather than overlaying more series on the
+existing panels.
 """
 
 from __future__ import annotations
@@ -36,13 +38,33 @@ BASELINE = "#c3c2b7"
 
 
 class LogRow:
-    __slots__ = ("timestamp", "soc_percent", "watts_in", "watts_out")
+    __slots__ = (
+        "timestamp",
+        "soc_percent",
+        "watts_in",
+        "watts_out",
+        "extra_battery_soc_percent",
+        "extra_battery_watts_in",
+        "extra_battery_watts_out",
+    )
 
-    def __init__(self, timestamp: datetime, soc_percent, watts_in, watts_out):
+    def __init__(
+        self,
+        timestamp: datetime,
+        soc_percent,
+        watts_in,
+        watts_out,
+        extra_battery_soc_percent=None,
+        extra_battery_watts_in=None,
+        extra_battery_watts_out=None,
+    ):
         self.timestamp = timestamp
         self.soc_percent = soc_percent
         self.watts_in = watts_in
         self.watts_out = watts_out
+        self.extra_battery_soc_percent = extra_battery_soc_percent
+        self.extra_battery_watts_in = extra_battery_watts_in
+        self.extra_battery_watts_out = extra_battery_watts_out
 
 
 def _parse_float(value: str):
@@ -62,6 +84,9 @@ def load_log(csv_path: Path) -> list[LogRow]:
                     soc_percent=_parse_float(raw.get("soc_percent")),
                     watts_in=_parse_float(raw.get("watts_in")),
                     watts_out=_parse_float(raw.get("watts_out")),
+                    extra_battery_soc_percent=_parse_float(raw.get("extra_battery_soc_percent")),
+                    extra_battery_watts_in=_parse_float(raw.get("extra_battery_watts_in")),
+                    extra_battery_watts_out=_parse_float(raw.get("extra_battery_watts_out")),
                 )
             )
     rows.sort(key=lambda r: r.timestamp)
@@ -99,6 +124,49 @@ def _label_line_end(ax, x, y, text, color) -> None:
     ax.plot([x], [y], marker="o", markersize=5, color=color, markeredgecolor=SURFACE, markeredgewidth=1.5)
 
 
+def _plot_soc_panel(ax, times, soc, label_suffix: str = "") -> None:
+    soc_plot = _nans_for_none(soc)
+    ax.plot(times, soc_plot, color=COLOR_SOC, linewidth=2, solid_capstyle="round", solid_joinstyle="round")
+    ax.fill_between(times, soc_plot, 0, color=COLOR_SOC, alpha=0.10, linewidth=0)
+    ax.set_ylabel(f"Charge{label_suffix} (%)")
+    ax.set_ylim(0, 100)
+    last_x, last_y = _last_valid(times, soc)
+    if last_y is not None:
+        _label_line_end(ax, last_x, last_y, f"{last_y:.0f}%", COLOR_SOC)
+    _style_axis(ax)
+
+
+def _plot_power_panel(ax, times, watts_in, watts_out, label_suffix: str = "") -> None:
+    watts_in_plot = _nans_for_none(watts_in)
+    watts_out_plot = _nans_for_none(watts_out)
+    ax.plot(
+        times, watts_in_plot, color=COLOR_WATTS_IN, linewidth=2,
+        solid_capstyle="round", solid_joinstyle="round", label="Power in",
+    )
+    ax.plot(
+        times, watts_out_plot, color=COLOR_WATTS_OUT, linewidth=2,
+        solid_capstyle="round", solid_joinstyle="round", label="Power out",
+    )
+    ax.axhline(0, color=BASELINE, linewidth=1)
+    ax.set_ylabel(f"Power{label_suffix} (W)")
+
+    last_in_x, last_in_y = _last_valid(times, watts_in)
+    if last_in_y is not None:
+        _label_line_end(ax, last_in_x, last_in_y, f"{last_in_y:.0f} W", COLOR_WATTS_IN)
+    last_out_x, last_out_y = _last_valid(times, watts_out)
+    if last_out_y is not None:
+        _label_line_end(ax, last_out_x, last_out_y, f"{last_out_y:.0f} W", COLOR_WATTS_OUT)
+
+    legend = ax.legend(
+        loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=2,
+        frameon=False, fontsize=9, labelcolor=TEXT_SECONDARY,
+    )
+    for handle in legend.legend_handles:
+        handle.set_linewidth(3)
+
+    _style_axis(ax)
+
+
 def plot_log(rows: list[LogRow], title: str = "EcoFlow DELTA 2 Max") -> plt.Figure:
     if not rows:
         raise ValueError("No rows to plot")
@@ -107,63 +175,42 @@ def plot_log(rows: list[LogRow], title: str = "EcoFlow DELTA 2 Max") -> plt.Figu
     soc = [r.soc_percent for r in rows]
     watts_in = [r.watts_in for r in rows]
     watts_out = [r.watts_out for r in rows]
+    extra_soc = [r.extra_battery_soc_percent for r in rows]
+    extra_in = [r.extra_battery_watts_in for r in rows]
+    extra_out = [r.extra_battery_watts_out for r in rows]
 
-    # matplotlib/numpy need NaN gaps, not None, to skip missing readings.
-    soc_plot = _nans_for_none(soc)
-    watts_in_plot = _nans_for_none(watts_in)
-    watts_out_plot = _nans_for_none(watts_out)
+    has_extra_battery = any(v is not None for v in (*extra_soc, *extra_in, *extra_out))
 
-    fig, (ax_soc, ax_power) = plt.subplots(
-        2, 1, figsize=(11, 7), sharex=True, facecolor=SURFACE,
-        gridspec_kw={"height_ratios": [1, 1.2], "hspace": 0.12},
-        layout="constrained",
-    )
+    if has_extra_battery:
+        fig, (ax_soc, ax_power, ax_extra_soc, ax_extra_power) = plt.subplots(
+            4, 1, figsize=(11, 13), sharex=True, facecolor=SURFACE,
+            gridspec_kw={"height_ratios": [1, 1.2, 1, 1.2], "hspace": 0.25},
+            layout="constrained",
+        )
+    else:
+        fig, (ax_soc, ax_power) = plt.subplots(
+            2, 1, figsize=(11, 7), sharex=True, facecolor=SURFACE,
+            gridspec_kw={"height_ratios": [1, 1.2], "hspace": 0.12},
+            layout="constrained",
+        )
     fig.suptitle(title, fontsize=14, fontweight="bold", color=TEXT_PRIMARY, x=0.02, ha="left")
 
-    # --- Panel 1: state of charge ---
-    ax_soc.plot(times, soc_plot, color=COLOR_SOC, linewidth=2, solid_capstyle="round", solid_joinstyle="round")
-    ax_soc.fill_between(times, soc_plot, 0, color=COLOR_SOC, alpha=0.10, linewidth=0)
-    ax_soc.set_ylabel("Charge (%)")
-    ax_soc.set_ylim(0, 100)
-    last_soc_x, last_soc_y = _last_valid(times, soc)
-    if last_soc_y is not None:
-        _label_line_end(ax_soc, last_soc_x, last_soc_y, f"{last_soc_y:.0f}%", COLOR_SOC)
-    _style_axis(ax_soc)
+    main_suffix = " — Main" if has_extra_battery else ""
+    _plot_soc_panel(ax_soc, times, soc, label_suffix=main_suffix)
+    _plot_power_panel(ax_power, times, watts_in, watts_out, label_suffix=main_suffix)
 
-    # --- Panel 2: power in / out ---
-    ax_power.plot(
-        times, watts_in_plot, color=COLOR_WATTS_IN, linewidth=2,
-        solid_capstyle="round", solid_joinstyle="round", label="Power in",
-    )
-    ax_power.plot(
-        times, watts_out_plot, color=COLOR_WATTS_OUT, linewidth=2,
-        solid_capstyle="round", solid_joinstyle="round", label="Power out",
-    )
-    ax_power.axhline(0, color=BASELINE, linewidth=1)
-    ax_power.set_ylabel("Power (W)")
-    ax_power.set_xlabel("Time (Eastern)")
+    last_ax = ax_power
+    if has_extra_battery:
+        _plot_soc_panel(ax_extra_soc, times, extra_soc, label_suffix=" — Extra Battery")
+        _plot_power_panel(ax_extra_power, times, extra_in, extra_out, label_suffix=" — Extra Battery")
+        last_ax = ax_extra_power
 
-    last_in_x, last_in_y = _last_valid(times, watts_in)
-    if last_in_y is not None:
-        _label_line_end(ax_power, last_in_x, last_in_y, f"{last_in_y:.0f} W", COLOR_WATTS_IN)
-    last_out_x, last_out_y = _last_valid(times, watts_out)
-    if last_out_y is not None:
-        _label_line_end(ax_power, last_out_x, last_out_y, f"{last_out_y:.0f} W", COLOR_WATTS_OUT)
-
-    legend = ax_power.legend(
-        loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=2,
-        frameon=False, fontsize=9, labelcolor=TEXT_SECONDARY,
-    )
-    for handle in legend.legend_handles:
-        handle.set_linewidth(3)
-
-    _style_axis(ax_power)
-
+    last_ax.set_xlabel("Time (Eastern)")
     # ConciseDateFormatter formats using its own tz (UTC by default),
     # ignoring the tzinfo already on the plotted datetimes, so it has to
     # be told explicitly or the tick labels silently revert to UTC.
-    ax_power.xaxis.set_major_formatter(
-        mdates.ConciseDateFormatter(ax_power.xaxis.get_major_locator(), tz=DISPLAY_TZ)
+    last_ax.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(last_ax.xaxis.get_major_locator(), tz=DISPLAY_TZ)
     )
     fig.autofmt_xdate()
     return fig

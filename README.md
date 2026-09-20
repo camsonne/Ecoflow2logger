@@ -47,12 +47,18 @@ Each row in the CSV has:
 | column | meaning |
 |---|---|
 | `timestamp` | UTC timestamp (ISO 8601) of the poll |
-| `soc_percent` | battery state of charge, % |
-| `watts_in` | total power into the device, W |
-| `watts_out` | total power out of the device, W |
+| `soc_percent` | main battery state of charge, % |
+| `watts_in` | total power into the main unit, W |
+| `watts_out` | total power out of the main unit, W |
+| `extra_battery_soc_percent` | extra/expansion battery state of charge, % (if one is connected) |
+| `extra_battery_watts_in` | power into the extra battery, W (if one is connected) |
+| `extra_battery_watts_out` | power out of the extra battery, W (if one is connected) |
 
 A reading is skipped (left blank) if the corresponding quota field wasn't
-present in that poll's response.
+present in that poll's response — including all three `extra_battery_*`
+columns if no expansion battery is connected. The plot renders two extra
+panels (extra-battery charge and power) only when at least one row has
+extra-battery data; without one, it stays at the original two panels.
 
 ## Plotting
 

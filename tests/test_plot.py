@@ -68,3 +68,64 @@ def test_plot_csv_handles_missing_soc(tmp_path: Path):
     assert result == out_path
     assert out_path.exists()
     assert out_path.stat().st_size > 0
+
+
+EXTRA_BATTERY_CSV = (
+    "timestamp,soc_percent,watts_in,watts_out,"
+    "extra_battery_soc_percent,extra_battery_watts_in,extra_battery_watts_out\n"
+    "2026-09-20T18:27:21+00:00,89.0,997.0,326.0,88.0,162.0,0.0\n"
+)
+
+
+def test_load_log_parses_extra_battery_columns(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(EXTRA_BATTERY_CSV)
+
+    rows = load_log(csv_path)
+
+    assert rows[0].extra_battery_soc_percent == 88.0
+    assert rows[0].extra_battery_watts_in == 162.0
+    assert rows[0].extra_battery_watts_out == 0.0
+
+
+def test_load_log_extra_battery_columns_absent_returns_none(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(SAMPLE_CSV)  # old-schema CSV with no extra-battery columns
+
+    rows = load_log(csv_path)
+
+    assert rows[0].extra_battery_soc_percent is None
+    assert rows[0].extra_battery_watts_in is None
+    assert rows[0].extra_battery_watts_out is None
+
+
+def test_plot_log_adds_two_panels_when_extra_battery_present(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(EXTRA_BATTERY_CSV)
+    rows = load_log(csv_path)
+
+    fig = plot_log(rows)
+
+    assert len(fig.axes) == 4
+
+
+def test_plot_log_stays_two_panels_without_extra_battery(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(SAMPLE_CSV)
+    rows = load_log(csv_path)
+
+    fig = plot_log(rows)
+
+    assert len(fig.axes) == 2
+
+
+def test_plot_csv_with_extra_battery_writes_image_file(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(EXTRA_BATTERY_CSV)
+    out_path = tmp_path / "plot.png"
+
+    result = plot_csv(csv_path, out_path)
+
+    assert result == out_path
+    assert out_path.exists()
+    assert out_path.stat().st_size > 0
