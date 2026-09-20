@@ -13,10 +13,50 @@ from .metrics import extract_reading
 
 logger = logging.getLogger(__name__)
 
-CSV_FIELDS = ["timestamp", "soc_percent", "watts_in", "watts_out"]
+CSV_FIELDS = [
+    "timestamp",
+    "soc_percent",
+    "watts_in",
+    "watts_out",
+    "extra_battery_soc_percent",
+    "extra_battery_watts_in",
+    "extra_battery_watts_out",
+]
 
 
-def append_reading(csv_path: Path, timestamp: datetime, soc, watts_in, watts_out) -> None:
+def _migrate_header_if_needed(csv_path: Path) -> None:
+    """Rewrite an existing CSV onto the current ``CSV_FIELDS`` schema.
+
+    Older logs were written before the extra-battery columns existed;
+    appending new-schema rows under their old header would silently
+    misalign columns. Missing values on pre-existing rows are left blank.
+    """
+    if not csv_path.exists() or csv_path.stat().st_size == 0:
+        return
+    with csv_path.open(newline="") as f:
+        existing_header = next(csv.reader(f), None)
+    if existing_header == CSV_FIELDS:
+        return
+    with csv_path.open(newline="") as f:
+        old_rows = list(csv.DictReader(f))
+    with csv_path.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+        writer.writeheader()
+        for row in old_rows:
+            writer.writerow({field: row.get(field, "") for field in CSV_FIELDS})
+
+
+def append_reading(
+    csv_path: Path,
+    timestamp: datetime,
+    soc,
+    watts_in,
+    watts_out,
+    extra_battery_soc=None,
+    extra_battery_watts_in=None,
+    extra_battery_watts_out=None,
+) -> None:
+    _migrate_header_if_needed(csv_path)
     is_new = not csv_path.exists() or csv_path.stat().st_size == 0
     with csv_path.open("a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
@@ -28,6 +68,9 @@ def append_reading(csv_path: Path, timestamp: datetime, soc, watts_in, watts_out
                 "soc_percent": "" if soc is None else soc,
                 "watts_in": "" if watts_in is None else watts_in,
                 "watts_out": "" if watts_out is None else watts_out,
+                "extra_battery_soc_percent": "" if extra_battery_soc is None else extra_battery_soc,
+                "extra_battery_watts_in": "" if extra_battery_watts_in is None else extra_battery_watts_in,
+                "extra_battery_watts_out": "" if extra_battery_watts_out is None else extra_battery_watts_out,
             }
         )
 
@@ -36,13 +79,25 @@ def poll_once(client: EcoFlowClient, device_sn: str, csv_path: Path) -> None:
     quota = client.get_all_quota(device_sn)
     reading = extract_reading(quota)
     now = datetime.now(timezone.utc)
-    append_reading(csv_path, now, reading.soc_percent, reading.watts_in, reading.watts_out)
+    append_reading(
+        csv_path,
+        now,
+        reading.soc_percent,
+        reading.watts_in,
+        reading.watts_out,
+        reading.extra_battery_soc_percent,
+        reading.extra_battery_watts_in,
+        reading.extra_battery_watts_out,
+    )
     logger.info(
-        "%s soc=%s%% in=%sW out=%sW",
+        "%s soc=%s%% in=%sW out=%sW extra_soc=%s%% extra_in=%sW extra_out=%sW",
         now.isoformat(timespec="seconds"),
         reading.soc_percent,
         reading.watts_in,
         reading.watts_out,
+        reading.extra_battery_soc_percent,
+        reading.extra_battery_watts_in,
+        reading.extra_battery_watts_out,
     )
     if reading.soc_percent is None or reading.watts_in is None or reading.watts_out is None:
         logger.warning(

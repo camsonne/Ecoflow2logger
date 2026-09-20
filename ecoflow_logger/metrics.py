@@ -29,11 +29,27 @@ WATTS_IN_KEYS = ["pd.wattsInSum", "inv.inputWatts"]
 # Total power flowing out of the device, in watts (AC + USB + DC output).
 WATTS_OUT_KEYS = ["pd.wattsOutSum", "inv.outputWatts"]
 
+# Extra/expansion battery pack ("Smart Extra Battery"), reported by
+# EcoFlow as a "slave" BMS pack. bms_slave_bmsSlaveStatus_1.* and
+# pd.bpPowerSoc were both confirmed present in a real DELTA 2 Max +
+# extra-battery quota response (2026-09-20) -- unverified which one
+# actually holds the live value, so both are tried.
+EXTRA_BATTERY_SOC_KEYS = [
+    "bms_slave_bmsSlaveStatus_1.soc",
+    "bms_slave_bmsSlaveStatus_1.f32ShowSoc",
+    "pd.bpPowerSoc",
+]
+EXTRA_BATTERY_WATTS_IN_KEYS = ["bms_slave_bmsSlaveStatus_1.inputWatts"]
+EXTRA_BATTERY_WATTS_OUT_KEYS = ["bms_slave_bmsSlaveStatus_1.outputWatts"]
+
 
 class Reading(NamedTuple):
     soc_percent: float | None
     watts_in: float | None
     watts_out: float | None
+    extra_battery_soc_percent: float | None
+    extra_battery_watts_in: float | None
+    extra_battery_watts_out: float | None
 
 
 def _first_present(data: dict[str, Any], keys: list[str]) -> float | None:
@@ -52,4 +68,7 @@ def extract_reading(quota_data: dict[str, Any]) -> Reading:
         soc_percent=_first_present(quota_data, SOC_KEYS),
         watts_in=_first_present(quota_data, WATTS_IN_KEYS),
         watts_out=_first_present(quota_data, WATTS_OUT_KEYS),
+        extra_battery_soc_percent=_first_present(quota_data, EXTRA_BATTERY_SOC_KEYS),
+        extra_battery_watts_in=_first_present(quota_data, EXTRA_BATTERY_WATTS_IN_KEYS),
+        extra_battery_watts_out=_first_present(quota_data, EXTRA_BATTERY_WATTS_OUT_KEYS),
     )
