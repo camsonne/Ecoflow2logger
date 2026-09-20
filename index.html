@@ -113,8 +113,13 @@
         row.watts_in ? `${Number(row.watts_in).toFixed(0)} W` : "–";
       document.getElementById("stat-out").textContent =
         row.watts_out ? `${Number(row.watts_out).toFixed(0)} W` : "–";
+      const lastReadingEt = new Date(row.timestamp).toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        dateStyle: "medium",
+        timeStyle: "medium",
+      });
       document.getElementById("updated").textContent =
-        `Last reading: ${row.timestamp} (page loaded ${new Date().toLocaleString()})`;
+        `Last reading: ${lastReadingEt} ET (page loaded ${new Date().toLocaleString()})`;
     })
     .catch(() => {
       document.getElementById("updated").textContent =

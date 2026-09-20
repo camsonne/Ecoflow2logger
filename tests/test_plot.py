@@ -4,7 +4,7 @@ matplotlib.use("Agg")
 
 from pathlib import Path
 
-from ecoflow_logger.plot import load_log, plot_csv
+from ecoflow_logger.plot import DISPLAY_TZ, load_log, plot_csv, plot_log
 
 SAMPLE_CSV = """timestamp,soc_percent,watts_in,watts_out
 2024-01-01T00:00:00+00:00,80,0,150
@@ -36,6 +36,22 @@ def test_plot_csv_writes_image_file(tmp_path: Path):
     assert result == out_path
     assert out_path.exists()
     assert out_path.stat().st_size > 0
+
+
+def test_plot_log_displays_times_in_eastern(tmp_path: Path):
+    # Stored timestamps are UTC; the chart should display them converted
+    # to America/New_York (EST in January, UTC-5), not raw UTC.
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text("timestamp,soc_percent,watts_in,watts_out\n2024-01-15T17:00:00+00:00,50,100,0\n")
+    rows = load_log(csv_path)
+
+    fig = plot_log(rows)
+    soc_line = fig.axes[0].lines[0]
+    plotted_time = soc_line.get_xdata()[0]  # original datetimes, not yet unit-converted
+
+    assert plotted_time.tzinfo == DISPLAY_TZ
+    assert plotted_time.hour == 12  # 17:00 UTC -> 12:00 EST (UTC-5)
+    assert plotted_time.utcoffset().total_seconds() == -5 * 3600
 
 
 def test_plot_csv_handles_missing_soc(tmp_path: Path):

@@ -12,9 +12,15 @@ import csv
 import math
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+
+# America/New_York rather than a fixed UTC-5 offset so the chart tracks
+# EST/EDT correctly across the DST switch; data is stored in UTC and
+# only converted for display.
+DISPLAY_TZ = ZoneInfo("America/New_York")
 
 # Reference palette (see dataviz skill): categorical slots + chart chrome.
 COLOR_SOC = "#2a78d6"  # slot 1, blue
@@ -97,7 +103,7 @@ def plot_log(rows: list[LogRow], title: str = "EcoFlow DELTA 2 Max") -> plt.Figu
     if not rows:
         raise ValueError("No rows to plot")
 
-    times = [r.timestamp for r in rows]
+    times = [r.timestamp.astimezone(DISPLAY_TZ) for r in rows]
     soc = [r.soc_percent for r in rows]
     watts_in = [r.watts_in for r in rows]
     watts_out = [r.watts_out for r in rows]
@@ -135,7 +141,7 @@ def plot_log(rows: list[LogRow], title: str = "EcoFlow DELTA 2 Max") -> plt.Figu
     )
     ax_power.axhline(0, color=BASELINE, linewidth=1)
     ax_power.set_ylabel("Power (W)")
-    ax_power.set_xlabel("Time")
+    ax_power.set_xlabel("Time (Eastern)")
 
     last_in_x, last_in_y = _last_valid(times, watts_in)
     if last_in_y is not None:
@@ -153,7 +159,12 @@ def plot_log(rows: list[LogRow], title: str = "EcoFlow DELTA 2 Max") -> plt.Figu
 
     _style_axis(ax_power)
 
-    ax_power.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax_power.xaxis.get_major_locator()))
+    # ConciseDateFormatter formats using its own tz (UTC by default),
+    # ignoring the tzinfo already on the plotted datetimes, so it has to
+    # be told explicitly or the tick labels silently revert to UTC.
+    ax_power.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(ax_power.xaxis.get_major_locator(), tz=DISPLAY_TZ)
+    )
     fig.autofmt_xdate()
     return fig
 
