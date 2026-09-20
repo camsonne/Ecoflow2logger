@@ -1,0 +1,48 @@
+name: Log EcoFlow reading and update chart
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # hourly; GitHub only fires schedule triggers from the default branch
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ecoflow-log-and-plot
+  cancel-in-progress: false
+
+jobs:
+  log-and-plot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: Poll device and append to log
+        env:
+          ECOFLOW_ACCESS_KEY: ${{ secrets.ECOFLOW_ACCESS_KEY }}
+          ECOFLOW_SECRET_KEY: ${{ secrets.ECOFLOW_SECRET_KEY }}
+        run: |
+          mkdir -p data
+          python -m ecoflow_logger log \
+            --sn "${{ secrets.ECOFLOW_DEVICE_SN }}" \
+            --csv data/ecoflow_log.csv \
+            --iterations 1 \
+            -v
+
+      - name: Render chart
+        run: python -m ecoflow_logger plot --csv data/ecoflow_log.csv --out data/ecoflow_plot.png
+
+      - name: Commit updated log and chart
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/ecoflow_log.csv data/ecoflow_plot.png
+          git diff --cached --quiet || git commit -m "Update EcoFlow log and chart [skip ci]"
+          git push
