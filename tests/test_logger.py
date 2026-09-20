@@ -27,6 +27,32 @@ def test_append_reading_migrates_old_header_schema(tmp_path: Path):
     assert rows[1]["extra_battery_watts_in"] == "162.0"
 
 
+def test_append_reading_migrates_pre_pv_header_schema(tmp_path: Path):
+    # Same migration concern as above, but for logs written after
+    # extra-battery columns existed but before the PV columns did.
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(
+        "timestamp,soc_percent,watts_in,watts_out,extra_battery_soc_percent,"
+        "extra_battery_watts_in,extra_battery_watts_out\n"
+        "2026-09-20T16:16:57+00:00,68.0,598.0,249.0,88.0,162.0,0.0\n"
+    )
+
+    append_reading(
+        csv_path,
+        datetime(2026, 9, 20, 17, 0, tzinfo=timezone.utc),
+        89.0, 997.0, 326.0, 88.0, 162.0, 0.0,
+        pv1_watts=497.0, pv2_watts=500.0,
+    )
+
+    with csv_path.open() as f:
+        rows = list(csv.DictReader(f))
+    assert list(rows[0].keys()) == CSV_FIELDS
+    assert len(rows) == 2
+    assert rows[0]["pv1_watts"] == ""  # backfilled blank, unknown for old row
+    assert rows[1]["pv1_watts"] == "497.0"
+    assert rows[1]["pv2_watts"] == "500.0"
+
+
 def test_append_reading_writes_header_once(tmp_path: Path):
     csv_path = tmp_path / "log.csv"
     t0 = datetime(2024, 1, 1, tzinfo=timezone.utc)
@@ -65,6 +91,27 @@ def test_poll_once_appends_one_row(tmp_path: Path):
         rows = list(csv.DictReader(f))
     assert len(rows) == 1
     assert rows[0]["soc_percent"] == "55.0"
+
+
+def test_poll_once_logs_pv_channels(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    client = _StubClient(
+        {
+            "pd.soc": 89,
+            "pd.wattsInSum": 997,
+            "pd.wattsOutSum": 326,
+            "mppt.inWatts": 497,
+            "mppt.pv2InWatts": 500,
+        }
+    )
+
+    poll_once(client, "SN123", csv_path)
+
+    with csv_path.open() as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) == 1
+    assert rows[0]["pv1_watts"] == "497.0"
+    assert rows[0]["pv2_watts"] == "500.0"
 
 
 def test_poll_once_warns_with_available_keys_when_metric_missing(tmp_path: Path, caplog):

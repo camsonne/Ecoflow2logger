@@ -42,6 +42,14 @@ EXTRA_BATTERY_SOC_KEYS = [
 EXTRA_BATTERY_WATTS_IN_KEYS = ["bms_slave_bmsSlaveStatus_1.inputWatts"]
 EXTRA_BATTERY_WATTS_OUT_KEYS = ["bms_slave_bmsSlaveStatus_1.outputWatts"]
 
+# Individual solar (PV) input channels -- the DELTA 2 Max has two separate
+# MPPT inputs, shown as two "Solar" tiles in the app. mppt.inWatts /
+# mppt.pv2InWatts confirmed present in a real quota response (2026-09-20);
+# pd.pv1ChargeWatts/pd.pv2ChargeWatts are the pd-namespace mirrors seen for
+# other metrics (e.g. pd.wattsInSum vs inv.inputWatts) and kept as fallbacks.
+PV1_WATTS_KEYS = ["mppt.inWatts", "pd.pv1ChargeWatts"]
+PV2_WATTS_KEYS = ["mppt.pv2InWatts", "pd.pv2ChargeWatts"]
+
 
 class Reading(NamedTuple):
     soc_percent: float | None
@@ -50,6 +58,8 @@ class Reading(NamedTuple):
     extra_battery_soc_percent: float | None
     extra_battery_watts_in: float | None
     extra_battery_watts_out: float | None
+    pv1_watts: float | None
+    pv2_watts: float | None
 
 
 def _first_present(data: dict[str, Any], keys: list[str]) -> float | None:
@@ -71,4 +81,6 @@ def extract_reading(quota_data: dict[str, Any]) -> Reading:
         extra_battery_soc_percent=_first_present(quota_data, EXTRA_BATTERY_SOC_KEYS),
         extra_battery_watts_in=_first_present(quota_data, EXTRA_BATTERY_WATTS_IN_KEYS),
         extra_battery_watts_out=_first_present(quota_data, EXTRA_BATTERY_WATTS_OUT_KEYS),
+        pv1_watts=_first_present(quota_data, PV1_WATTS_KEYS),
+        pv2_watts=_first_present(quota_data, PV2_WATTS_KEYS),
     )
