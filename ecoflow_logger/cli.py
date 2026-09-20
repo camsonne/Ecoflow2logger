@@ -8,7 +8,7 @@ import os
 import sys
 from pathlib import Path
 
-from .api import EcoFlowClient
+from .api import DEFAULT_BASE_URL, EcoFlowClient
 from .logger import run_logger
 from .plot import plot_csv
 
@@ -31,6 +31,17 @@ def _build_parser() -> argparse.ArgumentParser:
         help="EcoFlow Open API secret key (env: ECOFLOW_SECRET_KEY)",
     )
     log_parser.add_argument("--csv", default="ecoflow_log.csv", help="CSV file to append readings to")
+    log_parser.add_argument(
+        "--base-url", default=os.environ.get("ECOFLOW_BASE_URL") or DEFAULT_BASE_URL,
+        help=(
+            "EcoFlow Open API base URL (env: ECOFLOW_BASE_URL, default: "
+            f"{DEFAULT_BASE_URL}). EcoFlow accounts are region-locked to a "
+            "specific API host (e.g. api-a.ecoflow.com for the Americas vs "
+            "api-e.ecoflow.com for Europe) — 'accessKey is invalid' with a "
+            "key you're sure is correct usually means this is set to the "
+            "wrong region."
+        ),
+    )
     log_parser.add_argument("--interval", type=float, default=60.0, help="Seconds between polls (default: 60)")
     log_parser.add_argument("--iterations", type=int, default=None, help="Stop after N polls (default: run forever)")
     log_parser.add_argument("-v", "--verbose", action="store_true", help="Enable info-level logging")
@@ -56,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(
                 "--access-key/--secret-key are required (or set ECOFLOW_ACCESS_KEY / ECOFLOW_SECRET_KEY)"
             )
-        client = EcoFlowClient(args.access_key, args.secret_key)
+        client = EcoFlowClient(args.access_key, args.secret_key, base_url=args.base_url)
         run_logger(client, args.sn, Path(args.csv), args.interval, args.iterations)
         return 0
 

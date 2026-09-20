@@ -28,6 +28,11 @@ jobs:
         env:
           ECOFLOW_ACCESS_KEY: ${{ secrets.ECOFLOW_ACCESS_KEY }}
           ECOFLOW_SECRET_KEY: ${{ secrets.ECOFLOW_SECRET_KEY }}
+          # Optional repo variable (Settings -> Secrets and variables ->
+          # Actions -> Variables) for accounts on a non-default API region,
+          # e.g. https://api-a.ecoflow.com for the Americas. Falls back to
+          # the client's default (api-e.ecoflow.com) when unset.
+          ECOFLOW_BASE_URL: ${{ vars.ECOFLOW_BASE_URL }}
         run: |
           mkdir -p data
           python -m ecoflow_logger log \

@@ -22,6 +22,15 @@ export ECOFLOW_ACCESS_KEY=...
 export ECOFLOW_SECRET_KEY=...
 ```
 
+EcoFlow accounts are region-locked to a specific API host. If you get
+`EcoFlow API error (code='8513'): 'accessKey is invalid'` with a key you're
+sure is correct, you're very likely on the wrong region's endpoint — set
+`ECOFLOW_BASE_URL` (or pass `--base-url`) to the other one:
+
+```bash
+export ECOFLOW_BASE_URL=https://api-a.ecoflow.com  # Americas — default is api-e.ecoflow.com (Europe)
+```
+
 ## Logging
 
 Poll the device every 60 seconds and append readings to a CSV file:

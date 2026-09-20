@@ -57,13 +57,25 @@ def run_logger(
 
     Errors from a single poll are logged and swallowed so a transient
     network or API failure doesn't kill a long-running logging session.
+    A bounded run (``iterations`` set, e.g. a single CI invocation) that
+    never manages a single successful poll re-raises the last error
+    instead of exiting cleanly with nothing logged, so the failure is
+    visible rather than silently producing an empty CSV.
     """
     count = 0
+    successes = 0
+    last_error: Exception | None = None
     while iterations is None or count < iterations:
         try:
             poll_once(client, device_sn, csv_path)
-        except Exception:
+            successes += 1
+            last_error = None
+        except Exception as exc:
             logger.exception("Failed to poll EcoFlow device %s", device_sn)
+            last_error = exc
         count += 1
         if iterations is None or count < iterations:
             time.sleep(interval_seconds)
+
+    if iterations is not None and successes == 0 and last_error is not None:
+        raise last_error
