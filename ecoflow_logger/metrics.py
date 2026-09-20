@@ -10,8 +10,18 @@ from __future__ import annotations
 
 from typing import Any, NamedTuple
 
-# State of charge, in percent.
-SOC_KEYS = ["bmsMaster.soc", "bmsMaster.f32ShowSoc", "soc"]
+# State of charge, in percent. `pd.soc` confirmed against a real DELTA 2
+# Max (2026-09-20); the bmsMaster.* keys were an unverified guess that
+# never matched any real device response and are kept as fallbacks for
+# other EcoFlow models that may use them.
+SOC_KEYS = [
+    "pd.soc",
+    "bms_emsStatus.lcdShowSoc",
+    "bms_bmsStatus.soc",
+    "bmsMaster.soc",
+    "bmsMaster.f32ShowSoc",
+    "soc",
+]
 
 # Total power flowing into the device, in watts (AC + solar + car input).
 WATTS_IN_KEYS = ["pd.wattsInSum", "inv.inputWatts"]
