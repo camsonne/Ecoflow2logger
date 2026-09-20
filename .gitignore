@@ -4,6 +4,6 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
-ecoflow_log.csv
-*.png
+/ecoflow_log.csv
+/*.png
 .env
