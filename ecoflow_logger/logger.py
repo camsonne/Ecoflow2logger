@@ -44,6 +44,14 @@ def poll_once(client: EcoFlowClient, device_sn: str, csv_path: Path) -> None:
         reading.watts_in,
         reading.watts_out,
     )
+    if reading.soc_percent is None or reading.watts_in is None or reading.watts_out is None:
+        logger.warning(
+            "One or more metrics were missing from the quota response for "
+            "device %s; none of the candidate field names matched. Available "
+            "quota keys: %s",
+            device_sn,
+            sorted(quota.keys()),
+        )
 
 
 def run_logger(

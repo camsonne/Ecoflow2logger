@@ -9,6 +9,7 @@ honestly.
 from __future__ import annotations
 
 import csv
+import math
 from datetime import datetime
 from pathlib import Path
 
@@ -101,6 +102,11 @@ def plot_log(rows: list[LogRow], title: str = "EcoFlow DELTA 2 Max") -> plt.Figu
     watts_in = [r.watts_in for r in rows]
     watts_out = [r.watts_out for r in rows]
 
+    # matplotlib/numpy need NaN gaps, not None, to skip missing readings.
+    soc_plot = _nans_for_none(soc)
+    watts_in_plot = _nans_for_none(watts_in)
+    watts_out_plot = _nans_for_none(watts_out)
+
     fig, (ax_soc, ax_power) = plt.subplots(
         2, 1, figsize=(11, 7), sharex=True, facecolor=SURFACE,
         gridspec_kw={"height_ratios": [1, 1.2], "hspace": 0.12},
@@ -109,8 +115,8 @@ def plot_log(rows: list[LogRow], title: str = "EcoFlow DELTA 2 Max") -> plt.Figu
     fig.suptitle(title, fontsize=14, fontweight="bold", color=TEXT_PRIMARY, x=0.02, ha="left")
 
     # --- Panel 1: state of charge ---
-    ax_soc.plot(times, soc, color=COLOR_SOC, linewidth=2, solid_capstyle="round", solid_joinstyle="round")
-    ax_soc.fill_between(times, soc, 0, color=COLOR_SOC, alpha=0.10, linewidth=0)
+    ax_soc.plot(times, soc_plot, color=COLOR_SOC, linewidth=2, solid_capstyle="round", solid_joinstyle="round")
+    ax_soc.fill_between(times, soc_plot, 0, color=COLOR_SOC, alpha=0.10, linewidth=0)
     ax_soc.set_ylabel("Charge (%)")
     ax_soc.set_ylim(0, 100)
     last_soc_x, last_soc_y = _last_valid(times, soc)
@@ -120,11 +126,11 @@ def plot_log(rows: list[LogRow], title: str = "EcoFlow DELTA 2 Max") -> plt.Figu
 
     # --- Panel 2: power in / out ---
     ax_power.plot(
-        times, watts_in, color=COLOR_WATTS_IN, linewidth=2,
+        times, watts_in_plot, color=COLOR_WATTS_IN, linewidth=2,
         solid_capstyle="round", solid_joinstyle="round", label="Power in",
     )
     ax_power.plot(
-        times, watts_out, color=COLOR_WATTS_OUT, linewidth=2,
+        times, watts_out_plot, color=COLOR_WATTS_OUT, linewidth=2,
         solid_capstyle="round", solid_joinstyle="round", label="Power out",
     )
     ax_power.axhline(0, color=BASELINE, linewidth=1)
@@ -157,6 +163,10 @@ def _last_valid(xs, ys):
         if y is not None:
             return x, y
     return None, None
+
+
+def _nans_for_none(values: list[float | None]) -> list[float]:
+    return [math.nan if v is None else v for v in values]
 
 
 def plot_csv(csv_path: Path, output_path: Path | None = None, title: str = "EcoFlow DELTA 2 Max") -> Path | None:
