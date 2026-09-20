@@ -53,12 +53,15 @@ Each row in the CSV has:
 | `extra_battery_soc_percent` | extra/expansion battery state of charge, % (if one is connected) |
 | `extra_battery_watts_in` | power into the extra battery, W (if one is connected) |
 | `extra_battery_watts_out` | power out of the extra battery, W (if one is connected) |
+| `pv1_watts` | power from solar input 1, W (if any panels are connected) |
+| `pv2_watts` | power from solar input 2, W (if any panels are connected) |
 
 A reading is skipped (left blank) if the corresponding quota field wasn't
-present in that poll's response — including all three `extra_battery_*`
-columns if no expansion battery is connected. The plot renders two extra
-panels (extra-battery charge and power) only when at least one row has
-extra-battery data; without one, it stays at the original two panels.
+present in that poll's response — including the `extra_battery_*` columns
+if no expansion battery is connected, and the `pv*_watts` columns if no
+solar panels are connected. The plot renders extra panels (extra-battery
+charge/power, and/or individual PV power) only when at least one row has
+that data; without either, it stays at the original two panels.
 
 ## Plotting
 

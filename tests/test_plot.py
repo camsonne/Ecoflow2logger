@@ -129,3 +129,78 @@ def test_plot_csv_with_extra_battery_writes_image_file(tmp_path: Path):
     assert result == out_path
     assert out_path.exists()
     assert out_path.stat().st_size > 0
+
+
+PV_CSV = (
+    "timestamp,soc_percent,watts_in,watts_out,"
+    "extra_battery_soc_percent,extra_battery_watts_in,extra_battery_watts_out,"
+    "pv1_watts,pv2_watts\n"
+    "2026-09-20T18:27:21+00:00,89.0,997.0,326.0,,,,497.0,500.0\n"
+)
+
+
+def test_load_log_parses_pv_columns(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(PV_CSV)
+
+    rows = load_log(csv_path)
+
+    assert rows[0].pv1_watts == 497.0
+    assert rows[0].pv2_watts == 500.0
+
+
+def test_load_log_pv_columns_absent_returns_none(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(SAMPLE_CSV)  # old-schema CSV with no PV columns
+
+    rows = load_log(csv_path)
+
+    assert rows[0].pv1_watts is None
+    assert rows[0].pv2_watts is None
+
+
+def test_plot_log_adds_one_panel_when_pv_present(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(PV_CSV)
+    rows = load_log(csv_path)
+
+    fig = plot_log(rows)
+
+    assert len(fig.axes) == 3
+
+
+def test_plot_log_stays_two_panels_without_pv(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(EXTRA_BATTERY_CSV)  # has extra battery but no PV columns
+    rows = load_log(csv_path)
+
+    fig = plot_log(rows)
+
+    assert len(fig.axes) == 4
+
+
+def test_plot_log_adds_five_panels_with_pv_and_extra_battery(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(
+        "timestamp,soc_percent,watts_in,watts_out,"
+        "extra_battery_soc_percent,extra_battery_watts_in,extra_battery_watts_out,"
+        "pv1_watts,pv2_watts\n"
+        "2026-09-20T18:27:21+00:00,89.0,997.0,326.0,88.0,162.0,0.0,497.0,500.0\n"
+    )
+    rows = load_log(csv_path)
+
+    fig = plot_log(rows)
+
+    assert len(fig.axes) == 5
+
+
+def test_plot_csv_with_pv_writes_image_file(tmp_path: Path):
+    csv_path = tmp_path / "log.csv"
+    csv_path.write_text(PV_CSV)
+    out_path = tmp_path / "plot.png"
+
+    result = plot_csv(csv_path, out_path)
+
+    assert result == out_path
+    assert out_path.exists()
+    assert out_path.stat().st_size > 0

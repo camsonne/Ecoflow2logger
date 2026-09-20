@@ -90,6 +90,8 @@
     <div class="stat extra-stat" id="tile-extra-soc" hidden><div class="label">Extra battery charge</div><div class="value" id="stat-extra-soc">–</div></div>
     <div class="stat extra-stat" id="tile-extra-in" hidden><div class="label">Extra battery power in</div><div class="value" id="stat-extra-in">–</div></div>
     <div class="stat extra-stat" id="tile-extra-out" hidden><div class="label">Extra battery power out</div><div class="value" id="stat-extra-out">–</div></div>
+    <div class="stat pv-stat" id="tile-pv1" hidden><div class="label">Solar 1</div><div class="value" id="stat-pv1">–</div></div>
+    <div class="stat pv-stat" id="tile-pv2" hidden><div class="label">Solar 2</div><div class="value" id="stat-pv2">–</div></div>
   </div>
 
   <img src="data/ecoflow_plot.png" alt="EcoFlow charge and power chart" id="chart">
@@ -129,6 +131,17 @@
           row.extra_battery_watts_in ? `${Number(row.extra_battery_watts_in).toFixed(0)} W` : "–";
         document.getElementById("stat-extra-out").textContent =
           row.extra_battery_watts_out ? `${Number(row.extra_battery_watts_out).toFixed(0)} W` : "–";
+      }
+
+      // PV tiles only exist for setups with solar panels; the CSV simply
+      // won't have these values for everyone else's chart.
+      const hasPv = row.pv1_watts || row.pv2_watts;
+      document.querySelectorAll(".pv-stat").forEach((el) => (el.hidden = !hasPv));
+      if (hasPv) {
+        document.getElementById("stat-pv1").textContent =
+          row.pv1_watts ? `${Number(row.pv1_watts).toFixed(0)} W` : "–";
+        document.getElementById("stat-pv2").textContent =
+          row.pv2_watts ? `${Number(row.pv2_watts).toFixed(0)} W` : "–";
       }
 
       const lastReadingEt = new Date(row.timestamp).toLocaleString("en-US", {

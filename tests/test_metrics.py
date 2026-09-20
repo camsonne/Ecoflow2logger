@@ -34,7 +34,7 @@ def test_extract_reading_falls_back_when_primary_key_missing():
 
 def test_extract_reading_missing_everything_returns_none():
     reading = extract_reading({})
-    assert reading == (None, None, None, None, None, None)
+    assert reading == (None, None, None, None, None, None, None, None)
 
 
 def test_extract_reading_extracts_extra_battery():
@@ -60,3 +60,16 @@ def test_extract_reading_ignores_unparseable_values():
     data = {"bmsMaster.soc": "not-a-number"}
     reading = extract_reading(data)
     assert reading.soc_percent is None
+
+
+def test_extract_reading_extracts_pv_channels():
+    data = {"mppt.inWatts": 497.0, "mppt.pv2InWatts": 500.0}
+    reading = extract_reading(data)
+    assert reading.pv1_watts == 497.0
+    assert reading.pv2_watts == 500.0
+
+
+def test_extract_reading_pv_missing_returns_none():
+    reading = extract_reading({"pd.soc": 50})
+    assert reading.pv1_watts is None
+    assert reading.pv2_watts is None

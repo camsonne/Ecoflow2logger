@@ -21,13 +21,15 @@ CSV_FIELDS = [
     "extra_battery_soc_percent",
     "extra_battery_watts_in",
     "extra_battery_watts_out",
+    "pv1_watts",
+    "pv2_watts",
 ]
 
 
 def _migrate_header_if_needed(csv_path: Path) -> None:
     """Rewrite an existing CSV onto the current ``CSV_FIELDS`` schema.
 
-    Older logs were written before the extra-battery columns existed;
+    Older logs were written before the extra-battery/PV columns existed;
     appending new-schema rows under their old header would silently
     misalign columns. Missing values on pre-existing rows are left blank.
     """
@@ -55,6 +57,8 @@ def append_reading(
     extra_battery_soc=None,
     extra_battery_watts_in=None,
     extra_battery_watts_out=None,
+    pv1_watts=None,
+    pv2_watts=None,
 ) -> None:
     _migrate_header_if_needed(csv_path)
     is_new = not csv_path.exists() or csv_path.stat().st_size == 0
@@ -71,6 +75,8 @@ def append_reading(
                 "extra_battery_soc_percent": "" if extra_battery_soc is None else extra_battery_soc,
                 "extra_battery_watts_in": "" if extra_battery_watts_in is None else extra_battery_watts_in,
                 "extra_battery_watts_out": "" if extra_battery_watts_out is None else extra_battery_watts_out,
+                "pv1_watts": "" if pv1_watts is None else pv1_watts,
+                "pv2_watts": "" if pv2_watts is None else pv2_watts,
             }
         )
 
@@ -88,9 +94,11 @@ def poll_once(client: EcoFlowClient, device_sn: str, csv_path: Path) -> None:
         reading.extra_battery_soc_percent,
         reading.extra_battery_watts_in,
         reading.extra_battery_watts_out,
+        reading.pv1_watts,
+        reading.pv2_watts,
     )
     logger.info(
-        "%s soc=%s%% in=%sW out=%sW extra_soc=%s%% extra_in=%sW extra_out=%sW",
+        "%s soc=%s%% in=%sW out=%sW extra_soc=%s%% extra_in=%sW extra_out=%sW pv1=%sW pv2=%sW",
         now.isoformat(timespec="seconds"),
         reading.soc_percent,
         reading.watts_in,
@@ -98,6 +106,8 @@ def poll_once(client: EcoFlowClient, device_sn: str, csv_path: Path) -> None:
         reading.extra_battery_soc_percent,
         reading.extra_battery_watts_in,
         reading.extra_battery_watts_out,
+        reading.pv1_watts,
+        reading.pv2_watts,
     )
     if reading.soc_percent is None or reading.watts_in is None or reading.watts_out is None:
         logger.warning(
