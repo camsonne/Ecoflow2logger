@@ -30,17 +30,27 @@ WATTS_IN_KEYS = ["pd.wattsInSum", "inv.inputWatts"]
 WATTS_OUT_KEYS = ["pd.wattsOutSum", "inv.outputWatts"]
 
 # Extra/expansion battery pack ("Smart Extra Battery"), reported by
-# EcoFlow as a "slave" BMS pack. bms_slave_bmsSlaveStatus_1.* and
-# pd.bpPowerSoc were both confirmed present in a real DELTA 2 Max +
-# extra-battery quota response (2026-09-20) -- unverified which one
-# actually holds the live value, so both are tried.
-EXTRA_BATTERY_SOC_KEYS = [
+# EcoFlow as a "slave" BMS pack.
+#
+# The device exposes a status block per slave slot and keeps a stale one
+# around for a slot that is not actually attached -- on a real DELTA 2 Max
+# (2026-09-20) both blocks even carried the same packSn, while block 1 sat
+# frozen at 63% / 160W for hours and block 2 correctly tracked the pack as
+# full and idle. bms_kitInfo.watts is the authoritative slot list, with
+# avaFlag marking the slot that is really present, so the live block is
+# resolved through that rather than assumed to be slot 1.
+KIT_INFO_KEY = "bms_kitInfo.watts"
+
+# Only consulted when the device reports no kit info to resolve the slot
+# from. pd.bpPowerSoc mirrored the stale block on the device above, so it
+# is a last resort rather than a peer of the slave-status keys.
+FALLBACK_EXTRA_BATTERY_SOC_KEYS = [
     "bms_slave_bmsSlaveStatus_1.soc",
     "bms_slave_bmsSlaveStatus_1.f32ShowSoc",
     "pd.bpPowerSoc",
 ]
-EXTRA_BATTERY_WATTS_IN_KEYS = ["bms_slave_bmsSlaveStatus_1.inputWatts"]
-EXTRA_BATTERY_WATTS_OUT_KEYS = ["bms_slave_bmsSlaveStatus_1.outputWatts"]
+FALLBACK_EXTRA_BATTERY_WATTS_IN_KEYS = ["bms_slave_bmsSlaveStatus_1.inputWatts"]
+FALLBACK_EXTRA_BATTERY_WATTS_OUT_KEYS = ["bms_slave_bmsSlaveStatus_1.outputWatts"]
 
 # Individual solar (PV) input channels -- the DELTA 2 Max has two separate
 # MPPT inputs, shown as two "Solar" tiles in the app. mppt.inWatts /
@@ -72,15 +82,50 @@ def _first_present(data: dict[str, Any], keys: list[str]) -> float | None:
     return None
 
 
+def _attached_extra_battery_slot(quota_data: dict[str, Any]) -> int | None:
+    """Return the slave-slot number of the extra battery that is present.
+
+    ``bms_kitInfo.watts`` is a list with one entry per slot; the attached
+    one is flagged ``avaFlag == 1``. Slot numbering in the
+    ``bms_slave_bmsSlaveStatus_N`` keys is 1-based against that list.
+    """
+    kits = quota_data.get(KIT_INFO_KEY)
+    if not isinstance(kits, list):
+        return None
+    for index, kit in enumerate(kits):
+        if isinstance(kit, dict) and kit.get("avaFlag") == 1:
+            return index + 1
+    return None
+
+
+def _extra_battery_values(
+    quota_data: dict[str, Any],
+) -> tuple[float | None, float | None, float | None]:
+    slot = _attached_extra_battery_slot(quota_data)
+    if slot is None:
+        return (
+            _first_present(quota_data, FALLBACK_EXTRA_BATTERY_SOC_KEYS),
+            _first_present(quota_data, FALLBACK_EXTRA_BATTERY_WATTS_IN_KEYS),
+            _first_present(quota_data, FALLBACK_EXTRA_BATTERY_WATTS_OUT_KEYS),
+        )
+    prefix = f"bms_slave_bmsSlaveStatus_{slot}."
+    return (
+        _first_present(quota_data, [f"{prefix}soc", f"{prefix}f32ShowSoc"]),
+        _first_present(quota_data, [f"{prefix}inputWatts"]),
+        _first_present(quota_data, [f"{prefix}outputWatts"]),
+    )
+
+
 def extract_reading(quota_data: dict[str, Any]) -> Reading:
     """Pull SoC and power in/out out of a raw ``get_all_quota()`` payload."""
+    extra_soc, extra_in, extra_out = _extra_battery_values(quota_data)
     return Reading(
         soc_percent=_first_present(quota_data, SOC_KEYS),
         watts_in=_first_present(quota_data, WATTS_IN_KEYS),
         watts_out=_first_present(quota_data, WATTS_OUT_KEYS),
-        extra_battery_soc_percent=_first_present(quota_data, EXTRA_BATTERY_SOC_KEYS),
-        extra_battery_watts_in=_first_present(quota_data, EXTRA_BATTERY_WATTS_IN_KEYS),
-        extra_battery_watts_out=_first_present(quota_data, EXTRA_BATTERY_WATTS_OUT_KEYS),
+        extra_battery_soc_percent=extra_soc,
+        extra_battery_watts_in=extra_in,
+        extra_battery_watts_out=extra_out,
         pv1_watts=_first_present(quota_data, PV1_WATTS_KEYS),
         pv2_watts=_first_present(quota_data, PV2_WATTS_KEYS),
     )
