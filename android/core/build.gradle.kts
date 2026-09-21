@@ -6,7 +6,10 @@ plugins {
 // (dependencyResolutionManagement), not declared per-module.
 
 dependencies {
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // api, not implementation: OkHttpClient is a public constructor
+    // parameter type on EcoFlowClient, so consumers like :app need it on
+    // their own compile classpath, not just at runtime.
+    api("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.json:json:20240303")
 
     testImplementation(kotlin("test"))
