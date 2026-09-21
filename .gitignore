@@ -7,3 +7,13 @@ venv/
 /ecoflow_log.csv
 /*.png
 .env
+
+# Android (android/)
+android/local.properties
+android/**/build/
+android/.gradle/
+android/.idea/
+android/*.iml
+android/**/*.iml
+android/captures/
+android/.cxx/
