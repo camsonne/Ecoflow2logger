@@ -25,7 +25,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
+      # No SDK-install step: GitHub's ubuntu-latest runner image ships a
+      # preinstalled Android SDK (ANDROID_HOME preset, licenses
+      # pre-accepted). android-actions/setup-android@v3 was tried here but
+      # its unconditional `sdkmanager tools` call fails outright, since
+      # Google removed the legacy "tools" package from the SDK repository.
 
       - name: Core module tests (plain Kotlin/JVM)
         run: ./gradlew :core:test --configure-on-demand
