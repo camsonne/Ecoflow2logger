@@ -1,0 +1,45 @@
+name: Android app build check
+
+# Manual only. The android/ app module was written in a sandbox that
+# cannot reach dl.google.com (the Android SDK distribution point), so it
+# was never compiled before merging -- this workflow is the first real
+# build check, run on a GitHub-hosted runner that has full internet
+# access instead.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Core module tests (plain Kotlin/JVM)
+        run: ./gradlew :core:test --configure-on-demand
+
+      - name: Assemble debug APK
+        run: ./gradlew :app:assembleDebug
+
+      - name: App module unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
+      - name: Upload debug APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
