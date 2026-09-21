@@ -116,6 +116,16 @@ Android Chrome, open the Pages URL and use **⋮ → Add to Home screen** (or
 the install prompt if Chrome offers one) to get an app icon that opens
 full-screen, with the last-seen reading cached for offline viewing.
 
+## Android app
+
+[`android/`](android/README.md) is a separate, standalone Android app for
+anyone with their own EcoFlow device — not just this repo's owner. Each
+user enters their own EcoFlow API credentials in the app; it polls their
+device in the background and shows a dashboard on their phone, with no
+GitHub account, repo, or shared backend involved. See
+[`android/README.md`](android/README.md) for the architecture, what's been
+verified, and how to build it.
+
 ## How it works
 
 - `ecoflow_logger/api.py` — signs and sends requests to EcoFlow's
