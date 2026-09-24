@@ -111,7 +111,11 @@ def _style_axis(ax) -> None:
         else:
             spine.set_color(BASELINE)
             spine.set_linewidth(1)
-    ax.grid(True, axis="y", color=GRIDLINE, linewidth=1, linestyle="-")
+    # Vertical gridlines too (not just horizontal) so the time ticks on the
+    # bottom panel can be traced straight down through the others — needed
+    # to tell e.g. where a solar-power bump lines up against the charge and
+    # power panels above it.
+    ax.grid(True, axis="both", color=GRIDLINE, linewidth=1, linestyle="-")
     ax.set_axisbelow(True)
     ax.tick_params(colors=TEXT_MUTED, labelsize=9)
     ax.xaxis.label.set_color(TEXT_SECONDARY)
@@ -253,6 +257,19 @@ def plot_log(rows: list[LogRow], title: str = "EcoFlow DELTA 2 Max") -> plt.Figu
 
     for ax, (_, render) in zip(axes, panels):
         render(ax)
+
+    # The default AutoDateLocator's minticks=5 spaces ticks about every 12h
+    # over a multi-day log, too coarse to read off when a solar charging
+    # window started/ended. Raising minticks pushes it to pick a denser
+    # candidate interval (hourly-ish rather than daily-ish) while still
+    # auto-coarsening for longer log spans as the CSV keeps growing.
+    #
+    # Every panel gets its own locator instance (each Locator binds to the
+    # axis it's set on, so one instance can't be shared) with matching
+    # settings, so the vertical gridlines from _style_axis line up across
+    # all panels even though only the bottom one shows tick labels.
+    for ax in axes:
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=10, maxticks=20))
 
     last_ax = axes[-1]
     last_ax.set_xlabel("Time (Eastern)")
