@@ -93,6 +93,7 @@ variables → Actions):
 | `ECOFLOW_ACCESS_KEY` | your EcoFlow Open API access key |
 | `ECOFLOW_SECRET_KEY` | your EcoFlow Open API secret key |
 | `ECOFLOW_DEVICE_SN` | your device's serial number |
+| `ECOFLOW_DEVICE_SN_2` *(optional)* | serial number of a second device on the same account to also log — writes to `data/ecoflow_log_delta2_2.csv` and `data/ecoflow_plot_delta2_2.png` |
 | `ECOFLOW_BASE_URL` *(optional)* | only if your EcoFlow account is on a non-default API region — see below |
 
 Scheduled (`cron`) workflows only fire from the repository's default branch,
