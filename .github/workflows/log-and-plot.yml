@@ -78,6 +78,28 @@ jobs:
             --iterations 1 \
             -v
 
+      - name: TEMP debug - dump raw quota for second device
+        if: ${{ env.HAS_SECOND_DEVICE == 'true' }}
+        env:
+          ECOFLOW_ACCESS_KEY: ${{ secrets.ECOFLOW_ACCESS_KEY }}
+          ECOFLOW_SECRET_KEY: ${{ secrets.ECOFLOW_SECRET_KEY }}
+          ECOFLOW_BASE_URL: ${{ secrets.ECOFLOW_BASE_URL || vars.ECOFLOW_BASE_URL }}
+          ECOFLOW_DEVICE_SN_2: ${{ secrets.ECOFLOW_DEVICE_SN_2 }}
+        run: |
+          python -c "
+          import json, os
+          from ecoflow_logger.api import EcoFlowClient
+          client = EcoFlowClient(
+              os.environ['ECOFLOW_ACCESS_KEY'],
+              os.environ['ECOFLOW_SECRET_KEY'],
+              base_url=os.environ.get('ECOFLOW_BASE_URL') or 'https://api-e.ecoflow.com',
+          )
+          data = client.get_all_quota(os.environ['ECOFLOW_DEVICE_SN_2'])
+          print('quota key count:', len(data))
+          for k in sorted(data):
+              print(f'{k}={data[k]!r}')
+          "
+
       - name: Render second device chart
         if: ${{ env.HAS_SECOND_DEVICE == 'true' }}
         run: |
