@@ -93,6 +93,7 @@ variables → Actions):
 | `ECOFLOW_ACCESS_KEY` | your EcoFlow Open API access key |
 | `ECOFLOW_SECRET_KEY` | your EcoFlow Open API secret key |
 | `ECOFLOW_DEVICE_SN` | your device's serial number |
+| `ECOFLOW_DEVICE_SN_2` *(optional)* | serial number of a second device on the same account to also log — writes to `data/ecoflow_log_delta2_2.csv` and `data/ecoflow_plot_delta2_2.png` |
 | `ECOFLOW_BASE_URL` *(optional)* | only if your EcoFlow account is on a non-default API region — see below |
 
 Scheduled (`cron`) workflows only fire from the repository's default branch,
@@ -104,6 +105,10 @@ so this starts running once the workflow file is merged there.
 latest charge/power reading plus the chart — that reads `data/ecoflow_log.csv`
 and `data/ecoflow_plot.png` straight out of the repo, so it stays in sync with
 every commit the Actions workflow above makes.
+
+If `ECOFLOW_DEVICE_SN_2` is configured (see above), [`device2.html`](device2.html)
+is the same dashboard for the second device, reading `data/ecoflow_log_delta2_2.csv`
+and `data/ecoflow_plot_delta2_2.png`. Each page links to the other.
 
 To publish it: **Settings → Pages → Build and deployment → Source: "Deploy
 from a branch" → Branch: `main`, folder: `/ (root)` → Save.** GitHub then

@@ -6,6 +6,7 @@ const CACHE = "ecoflow-dashboard-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./device2.html",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

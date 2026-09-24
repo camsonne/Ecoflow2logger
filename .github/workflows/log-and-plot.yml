@@ -15,6 +15,11 @@ concurrency:
 jobs:
   log-and-plot:
     runs-on: ubuntu-latest
+    env:
+      # `if:` conditions can't reference `secrets` directly, so this
+      # mirrors the secret into an env var the "second device" steps'
+      # `if:` checks can read instead.
+      HAS_SECOND_DEVICE: ${{ secrets.ECOFLOW_DEVICE_SN_2 != '' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -55,10 +60,37 @@ jobs:
       - name: Render chart
         run: python -m ecoflow_logger plot --csv data/ecoflow_log.csv --out data/ecoflow_plot.png
 
+      - name: Poll second device and append to log
+        # Skipped until ECOFLOW_DEVICE_SN_2 is added as a repo secret, so
+        # merging this doesn't break the workflow for accounts that only
+        # monitor one device.
+        if: ${{ env.HAS_SECOND_DEVICE == 'true' }}
+        env:
+          ECOFLOW_ACCESS_KEY: ${{ secrets.ECOFLOW_ACCESS_KEY }}
+          ECOFLOW_SECRET_KEY: ${{ secrets.ECOFLOW_SECRET_KEY }}
+          ECOFLOW_BASE_URL: ${{ secrets.ECOFLOW_BASE_URL || vars.ECOFLOW_BASE_URL }}
+          ECOFLOW_DEVICE_SN_2: ${{ secrets.ECOFLOW_DEVICE_SN_2 }}
+        run: |
+          mkdir -p data
+          python -m ecoflow_logger log \
+            --sn "$ECOFLOW_DEVICE_SN_2" \
+            --csv data/ecoflow_log_delta2_2.csv \
+            --iterations 1 \
+            -v
+
+      - name: Render second device chart
+        if: ${{ env.HAS_SECOND_DEVICE == 'true' }}
+        run: |
+          python -m ecoflow_logger plot \
+            --csv data/ecoflow_log_delta2_2.csv \
+            --out data/ecoflow_plot_delta2_2.png \
+            --title "EcoFlow delta2_2"
+
       - name: Commit updated log and chart
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/ecoflow_log.csv data/ecoflow_plot.png
+          git add data/ecoflow_log_delta2_2.csv data/ecoflow_plot_delta2_2.png 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Update EcoFlow log and chart [skip ci]"
           git push

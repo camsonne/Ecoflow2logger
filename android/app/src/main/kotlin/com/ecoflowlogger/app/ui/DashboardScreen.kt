@@ -91,8 +91,9 @@ fun DashboardScreen(readingsStore: ReadingsStore, onOpenSettings: () -> Unit) {
                 add(Stat("Charge", latest?.socPercent?.let { "${it.roundToInt()}%" } ?: "–"))
                 add(Stat("Power in", latest?.wattsIn?.let { "${it.roundToInt()} W" } ?: "–"))
                 add(Stat("Power out", latest?.wattsOut?.let { "${it.roundToInt()} W" } ?: "–"))
-                if (latest?.extraBatterySocPercent != null) {
-                    add(Stat("Extra battery", "${latest.extraBatterySocPercent.roundToInt()}%"))
+                val extraBatterySoc = latest?.extraBatterySocPercent
+                if (extraBatterySoc != null) {
+                    add(Stat("Extra battery", "${extraBatterySoc.roundToInt()}%"))
                 }
                 if (latest?.pv1Watts != null || latest?.pv2Watts != null) {
                     add(Stat("Solar 1", latest.pv1Watts?.let { "${it.roundToInt()} W" } ?: "–"))
