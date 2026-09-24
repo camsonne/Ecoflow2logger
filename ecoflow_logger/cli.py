@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from .api import DEFAULT_BASE_URL, EcoFlowClient
+from .dashboard import write_dashboards
 from .logger import run_logger
 from .plot import plot_csv
 
@@ -51,6 +52,18 @@ def _build_parser() -> argparse.ArgumentParser:
     plot_parser.add_argument("--out", default=None, help="Save the plot to this image file instead of showing it")
     plot_parser.add_argument("--title", default="EcoFlow DELTA 2 Max", help="Plot title")
 
+    dashboards_parser = sub.add_parser(
+        "dashboards",
+        help="Render index.html/deviceN.html + sw.js for a list of devices",
+    )
+    dashboards_parser.add_argument(
+        "--sns", required=True,
+        help="Comma-separated device serial numbers, in device order (same value as ECOFLOW_DEVICE_SNS)",
+    )
+    dashboards_parser.add_argument(
+        "--out-dir", default=".", help="Directory to write the HTML pages and sw.js into (default: current dir)"
+    )
+
     return parser
 
 
@@ -76,6 +89,13 @@ def main(argv: list[str] | None = None) -> int:
         plot_csv(Path(args.csv), out, title=args.title)
         if out:
             print(f"Wrote {out}")
+        return 0
+
+    if args.command == "dashboards":
+        sns = args.sns.split(",")
+        written = write_dashboards(sns, Path(args.out_dir))
+        for path in written:
+            print(f"Wrote {path}")
         return 0
 
     parser.error(f"Unknown command: {args.command}")

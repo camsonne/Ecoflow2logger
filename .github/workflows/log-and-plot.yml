@@ -15,11 +15,6 @@ concurrency:
 jobs:
   log-and-plot:
     runs-on: ubuntu-latest
-    env:
-      # `if:` conditions can't reference `secrets` directly, so this
-      # mirrors the secret into an env var the "second device" steps'
-      # `if:` checks can read instead.
-      HAS_SECOND_DEVICE: ${{ secrets.ECOFLOW_DEVICE_SN_2 != '' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -33,7 +28,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Poll device and append to log
+      - name: Poll every configured device and render its chart
         env:
           ECOFLOW_ACCESS_KEY: ${{ secrets.ECOFLOW_ACCESS_KEY }}
           ECOFLOW_SECRET_KEY: ${{ secrets.ECOFLOW_SECRET_KEY }}
@@ -44,53 +39,45 @@ jobs:
           # Secrets and variables -> Actions has separate tabs for each;
           # this reads either so it's hard to get wrong).
           ECOFLOW_BASE_URL: ${{ secrets.ECOFLOW_BASE_URL || vars.ECOFLOW_BASE_URL }}
-          # Passed as an env var rather than interpolated into the run
-          # block below: `${{ }}` substitutes into the script text before
-          # bash parses it, so a value containing quotes or $(...) would
-          # be re-parsed as shell rather than read as a serial number.
-          ECOFLOW_DEVICE_SN: ${{ secrets.ECOFLOW_DEVICE_SN }}
+          # Comma-separated device serial numbers -- one workflow run polls
+          # however many are listed here, in order, rather than needing a
+          # separate secret + separate steps per device. Passed as an env
+          # var rather than interpolated into the run block below: `${{ }}`
+          # substitutes into the script text before bash parses it, so a
+          # value containing quotes or $(...) would be re-parsed as shell
+          # rather than read as serial numbers.
+          ECOFLOW_DEVICE_SNS: ${{ secrets.ECOFLOW_DEVICE_SNS }}
         run: |
           mkdir -p data
-          python -m ecoflow_logger log \
-            --sn "$ECOFLOW_DEVICE_SN" \
-            --csv data/ecoflow_log.csv \
-            --iterations 1 \
-            -v
+          IFS=',' read -ra sns <<< "$ECOFLOW_DEVICE_SNS"
+          index=0
+          for sn in "${sns[@]}"; do
+            sn="$(echo "$sn" | xargs)"  # trim whitespace
+            [ -z "$sn" ] && continue
+            index=$((index + 1))
+            if [ "$index" -eq 1 ]; then
+              csv="data/ecoflow_log.csv"
+              png="data/ecoflow_plot.png"
+              title="EcoFlow DELTA 2 Max"
+            else
+              csv="data/ecoflow_log_${index}.csv"
+              png="data/ecoflow_plot_${index}.png"
+              title="EcoFlow Device ${index}"
+            fi
+            python -m ecoflow_logger log --sn "$sn" --csv "$csv" --iterations 1 -v
+            python -m ecoflow_logger plot --csv "$csv" --out "$png" --title "$title"
+          done
 
-      - name: Render chart
-        run: python -m ecoflow_logger plot --csv data/ecoflow_log.csv --out data/ecoflow_plot.png
-
-      - name: Poll second device and append to log
-        # Skipped until ECOFLOW_DEVICE_SN_2 is added as a repo secret, so
-        # merging this doesn't break the workflow for accounts that only
-        # monitor one device.
-        if: ${{ env.HAS_SECOND_DEVICE == 'true' }}
+      - name: Render dashboard pages
         env:
-          ECOFLOW_ACCESS_KEY: ${{ secrets.ECOFLOW_ACCESS_KEY }}
-          ECOFLOW_SECRET_KEY: ${{ secrets.ECOFLOW_SECRET_KEY }}
-          ECOFLOW_BASE_URL: ${{ secrets.ECOFLOW_BASE_URL || vars.ECOFLOW_BASE_URL }}
-          ECOFLOW_DEVICE_SN_2: ${{ secrets.ECOFLOW_DEVICE_SN_2 }}
-        run: |
-          mkdir -p data
-          python -m ecoflow_logger log \
-            --sn "$ECOFLOW_DEVICE_SN_2" \
-            --csv data/ecoflow_log_delta2_2.csv \
-            --iterations 1 \
-            -v
-
-      - name: Render second device chart
-        if: ${{ env.HAS_SECOND_DEVICE == 'true' }}
-        run: |
-          python -m ecoflow_logger plot \
-            --csv data/ecoflow_log_delta2_2.csv \
-            --out data/ecoflow_plot_delta2_2.png \
-            --title "EcoFlow delta2_2"
+          ECOFLOW_DEVICE_SNS: ${{ secrets.ECOFLOW_DEVICE_SNS }}
+        run: python -m ecoflow_logger dashboards --sns "$ECOFLOW_DEVICE_SNS"
 
       - name: Commit updated log and chart
         run: |
+          shopt -s nullglob  # so device*.html expands to nothing (not a literal pathspec) with only 1 device
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/ecoflow_log.csv data/ecoflow_plot.png
-          git add data/ecoflow_log_delta2_2.csv data/ecoflow_plot_delta2_2.png 2>/dev/null || true
+          git add data/ index.html device*.html sw.js
           git diff --cached --quiet || git commit -m "Update EcoFlow log and chart [skip ci]"
           git push

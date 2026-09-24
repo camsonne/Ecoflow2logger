@@ -79,11 +79,10 @@ the trends.
 ## Automated logging on GitHub Actions
 
 [`.github/workflows/log-and-plot.yml`](.github/workflows/log-and-plot.yml) polls
-the device every 5 minutes, regenerates the chart, and commits both
-`data/ecoflow_log.csv` and `data/ecoflow_plot.png` back to the repository —
-so the chart embedded at the top of this README always reflects the latest
-reading. It also runs on demand via the "Run workflow" button under the
-Actions tab.
+every configured device every 5 minutes, regenerates each chart, and commits
+the data/chart files plus the dashboard pages back to the repository — so the
+chart embedded at the top of this README always reflects the latest reading.
+It also runs on demand via the "Run workflow" button under the Actions tab.
 
 To enable it, add these as repository secrets (Settings → Secrets and
 variables → Actions):
@@ -92,12 +91,24 @@ variables → Actions):
 |---|---|
 | `ECOFLOW_ACCESS_KEY` | your EcoFlow Open API access key |
 | `ECOFLOW_SECRET_KEY` | your EcoFlow Open API secret key |
-| `ECOFLOW_DEVICE_SN` | your device's serial number |
-| `ECOFLOW_DEVICE_SN_2` *(optional)* | serial number of a second device on the same account to also log — writes to `data/ecoflow_log_delta2_2.csv` and `data/ecoflow_plot_delta2_2.png` |
+| `ECOFLOW_DEVICE_SNS` | comma-separated serial numbers of every device to log, in order — e.g. `SNaaa111` for one device, or `SNaaa111,SNbbb222,SNccc333` for three |
 | `ECOFLOW_BASE_URL` *(optional)* | only if your EcoFlow account is on a non-default API region — see below |
 
 Scheduled (`cron`) workflows only fire from the repository's default branch,
 so this starts running once the workflow file is merged there.
+
+Adding a device is just adding its serial number to `ECOFLOW_DEVICE_SNS` —
+the workflow polls it, and `python -m ecoflow_logger dashboards` (run as
+part of the workflow) generates its `data/ecoflow_log_N.csv` /
+`ecoflow_plot_N.png` and a `deviceN.html` dashboard page automatically, with
+every page cross-linked to every other one. The first device keeps the
+original file names (`data/ecoflow_log.csv`, `data/ecoflow_plot.png`,
+`index.html`) so existing links keep working.
+
+*(Migrating from the old `ECOFLOW_DEVICE_SN` / `ECOFLOW_DEVICE_SN_2` secrets:
+set `ECOFLOW_DEVICE_SNS` to their values joined with a comma, in the same
+order — e.g. `ECOFLOW_DEVICE_SN`'s value first, then `ECOFLOW_DEVICE_SN_2`'s
+— then the old two secrets can be deleted.)*
 
 ## Live dashboard (GitHub Pages)
 
@@ -106,9 +117,9 @@ latest charge/power reading plus the chart — that reads `data/ecoflow_log.csv`
 and `data/ecoflow_plot.png` straight out of the repo, so it stays in sync with
 every commit the Actions workflow above makes.
 
-If `ECOFLOW_DEVICE_SN_2` is configured (see above), [`device2.html`](device2.html)
-is the same dashboard for the second device, reading `data/ecoflow_log_delta2_2.csv`
-and `data/ecoflow_plot_delta2_2.png`. Each page links to the other.
+Every device past the first gets its own `deviceN.html` page the same way,
+reading `data/ecoflow_log_N.csv` / `data/ecoflow_plot_N.png`. All pages link
+to each other.
 
 To publish it: **Settings → Pages → Build and deployment → Source: "Deploy
 from a branch" → Branch: `main`, folder: `/ (root)` → Save.** GitHub then
@@ -142,6 +153,8 @@ verified, and how to build it.
 - `ecoflow_logger/logger.py` — polls on an interval and appends rows to a
   CSV log, tolerating transient API/network failures.
 - `ecoflow_logger/plot.py` — reads the CSV and renders the two-panel chart.
+- `ecoflow_logger/dashboard.py` — renders `index.html`/`deviceN.html` and
+  `sw.js` for however many devices are configured.
 
 ## Tests
 
