@@ -1,3 +1,4 @@
 timestamp,soc_percent,watts_in,watts_out,extra_battery_soc_percent,extra_battery_watts_in,extra_battery_watts_out,pv1_watts,pv2_watts
 2026-09-24T09:08:24.634103+00:00,100.0,0.0,0.0,64.0,25.0,0.0,0.0,0.0
 2026-09-24T10:25:42.988799+00:00,100.0,0.0,0.0,64.0,25.0,0.0,0.0,0.0
+2026-09-24T10:34:03.339781+00:00,100.0,0.0,0.0,64.0,25.0,0.0,0.0,0.0
