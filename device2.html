@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EcoFlow DELTA 2 Max</title>
+<title>EcoFlow delta2_2</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -80,8 +80,8 @@
 </head>
 <body>
 <main>
-  <h1>EcoFlow DELTA 2 Max</h1>
-  <p class="subtitle">Charge and power, logged every 5 minutes by <a href="https://github.com/camsonne/Ecoflow2logger">GitHub Actions</a>. &middot; <a href="device2.html">Device 2 &rarr;</a></p>
+  <h1>EcoFlow delta2_2</h1>
+  <p class="subtitle">Charge and power, logged every 5 minutes by <a href="https://github.com/camsonne/Ecoflow2logger">GitHub Actions</a>. &middot; <a href="index.html">Device 1 &rarr;</a></p>
 
   <div class="stats" id="stats">
     <div class="stat"><div class="label">Charge</div><div class="value" id="stat-soc">–</div></div>
@@ -94,16 +94,16 @@
     <div class="stat pv-stat" id="tile-pv2" hidden><div class="label">Solar 2</div><div class="value" id="stat-pv2">–</div></div>
   </div>
 
-  <img src="data/ecoflow_plot.png" alt="EcoFlow charge and power chart" id="chart">
+  <img src="data/ecoflow_plot_delta2_2.png" alt="EcoFlow delta2_2 charge and power chart" id="chart">
   <p class="updated" id="updated">Loading latest reading…</p>
 </main>
 <script>
   // Bust caches so the page always shows the latest committed chart/data,
   // and reload periodically so the tab stays live without manual refresh.
   const bust = "?t=" + Date.now();
-  document.getElementById("chart").src = "data/ecoflow_plot.png" + bust;
+  document.getElementById("chart").src = "data/ecoflow_plot_delta2_2.png" + bust;
 
-  fetch("data/ecoflow_log.csv" + bust)
+  fetch("data/ecoflow_log_delta2_2.csv" + bust)
     .then((r) => r.text())
     .then((text) => {
       const lines = text.trim().split(/\r\n|\n/);

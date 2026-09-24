@@ -106,6 +106,10 @@ latest charge/power reading plus the chart — that reads `data/ecoflow_log.csv`
 and `data/ecoflow_plot.png` straight out of the repo, so it stays in sync with
 every commit the Actions workflow above makes.
 
+If `ECOFLOW_DEVICE_SN_2` is configured (see above), [`device2.html`](device2.html)
+is the same dashboard for the second device, reading `data/ecoflow_log_delta2_2.csv`
+and `data/ecoflow_plot_delta2_2.png`. Each page links to the other.
+
 To publish it: **Settings → Pages → Build and deployment → Source: "Deploy
 from a branch" → Branch: `main`, folder: `/ (root)` → Save.** GitHub then
 serves it at `https://<owner>.github.io/<repo>/` and redeploys automatically
