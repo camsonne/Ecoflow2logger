@@ -98,10 +98,30 @@ def _attached_extra_battery_slot(quota_data: dict[str, Any]) -> int | None:
     return None
 
 
+def _slot_with_live_cell_data(quota_data: dict[str, Any]) -> int | None:
+    """Find a slave slot with populated per-cell telemetry.
+
+    Confirmed on a real DELTA 2 Max (2026-09-24) where ``bms_kitInfo.watts``
+    reported ``avaFlag: 0`` for *both* slots -- avaFlag alone couldn't tell
+    the live slot from the stale one, and the stale one happened to be slot
+    1, so the old slot-1 fallback silently logged frozen data for hours.
+    The stale/mirrored slot has no real BMS link and reports empty
+    ``cellVol``/``cellTemp`` arrays, while the genuinely connected slot
+    reports real per-cell readings -- a signal independent of avaFlag.
+    """
+    for slot in (1, 2, 3, 4):
+        cell_vol = quota_data.get(f"bms_slave_bmsSlaveStatus_{slot}.cellVol")
+        if isinstance(cell_vol, list) and cell_vol:
+            return slot
+    return None
+
+
 def _extra_battery_values(
     quota_data: dict[str, Any],
 ) -> tuple[float | None, float | None, float | None]:
     slot = _attached_extra_battery_slot(quota_data)
+    if slot is None:
+        slot = _slot_with_live_cell_data(quota_data)
     if slot is None:
         return (
             _first_present(quota_data, FALLBACK_EXTRA_BATTERY_SOC_KEYS),
